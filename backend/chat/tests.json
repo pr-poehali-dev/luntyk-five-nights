@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "Chat with Luntik",
+      "method": "POST",
+      "path": "/",
+      "body": {"character": "luntik", "message": "Привет!", "history": [], "lang": "ru"},
+      "expectedStatus": 200,
+      "expectedBody": {"reply": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
