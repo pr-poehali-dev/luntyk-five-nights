@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 
 type Screen = 'menu' | 'settings' | 'difficulty' | 'stats' | 'help';
@@ -8,7 +8,7 @@ type Language = 'ru' | 'en';
 
 const TRANSLATIONS = {
   ru: {
-    title: 'ПЯТЬ НОЧЕЙ',
+    title: 'ПЯТЬ НОЧЕЙ С ЛУНТИКОМ',
     subtitle: 'выживи до рассвета',
     play: 'Играть',
     chars: 'Характеристики',
@@ -53,7 +53,7 @@ const TRANSLATIONS = {
     exitConfirm: 'Уверены? Прогресс сохранён.',
   },
   en: {
-    title: 'FIVE NIGHTS',
+    title: "FIVE NIGHTS AT LUNTIK'S",
     subtitle: 'survive till dawn',
     play: 'Play',
     chars: 'Characteristics',
@@ -148,6 +148,7 @@ export default function Index() {
   const [exitPrompt, setExitPrompt] = useState(false);
   const [statsTab, setStatsTab] = useState<'overview' | 'achievements' | 'challenges' | 'leaderboard'>('overview');
   const [helpTab, setHelpTab] = useState<'howto' | 'controls'>('howto');
+  const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
 
   const [masterVol, setMasterVol] = useState(80);
   const [musicVol, setMusicVol] = useState(60);
@@ -162,6 +163,11 @@ export default function Index() {
   const t = TRANSLATIONS[lang];
 
   useEffect(() => { setMounted(true); }, []);
+
+  const notify = useCallback((msg: string) => {
+    setToast({ msg, visible: true });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2500);
+  }, []);
 
   const goTo = (s: Screen) => {
     setMounted(false);
@@ -205,6 +211,26 @@ export default function Index() {
       <div className="scanlines" />
       <div className="vignette" />
 
+      {/* Toast notification */}
+      <div className="fixed top-6 left-1/2 z-[200] transition-all duration-300"
+        style={{
+          transform: `translateX(-50%) translateY(${toast.visible ? '0' : '-80px'})`,
+          opacity: toast.visible ? 1 : 0,
+          pointerEvents: 'none',
+        }}>
+        <div className="px-5 py-3 text-sm font-medium tracking-wide"
+          style={{
+            background: 'rgba(8,0,0,0.97)',
+            border: '1px solid rgba(200,0,0,0.6)',
+            color: '#e8d5c0',
+            boxShadow: '0 0 20px rgba(139,0,0,0.4)',
+            whiteSpace: 'nowrap',
+          }}>
+          <span style={{ color: '#CC0000', marginRight: '8px' }}>▸</span>
+          {toast.msg}
+        </div>
+      </div>
+
       <div className="relative z-10 min-h-screen flex flex-col"
         style={{ opacity: mounted ? 1 : 0, transition: 'opacity 0.25s ease' }}>
 
@@ -217,7 +243,7 @@ export default function Index() {
                   ▸ {lang === 'ru' ? 'ХОРРОР ВЫЖИВАНИЕ' : 'HORROR SURVIVAL'} ◂
                 </div>
                 <h1 className="font-horror animate-flicker leading-none"
-                  style={{ fontSize: 'clamp(3.5rem, 10vw, 8rem)', color: '#CC0000', textShadow: '0 0 40px rgba(200,0,0,0.5), 0 0 80px rgba(139,0,0,0.3)' }}>
+                  style={{ fontSize: 'clamp(2rem, 5.5vw, 5.5rem)', color: '#CC0000', textShadow: '0 0 40px rgba(200,0,0,0.5), 0 0 80px rgba(139,0,0,0.3)' }}>
                   {t.title}
                 </h1>
                 <p className="text-sm tracking-[0.3em] mt-1 uppercase font-light"
@@ -235,8 +261,8 @@ export default function Index() {
 
               <div className="flex flex-col gap-2 max-w-xs">
                 {[
-                  { label: t.play, icon: 'Play', action: () => alert(lang === 'ru' ? 'Игра запускается...' : 'Game starting...'), accent: true },
-                  { label: t.chars, icon: 'User', action: () => alert(lang === 'ru' ? 'Характеристики персонажа' : 'Character stats') },
+                  { label: t.play, icon: 'Play', action: () => notify(lang === 'ru' ? '🎮 Игра запускается...' : '🎮 Game starting...'), accent: true },
+                  { label: t.chars, icon: 'User', action: () => notify(lang === 'ru' ? '👤 Характеристики персонажа' : '👤 Character stats') },
                   { label: t.difficulty, icon: 'Moon', action: () => goTo('difficulty') },
                   { label: t.stats, icon: 'BarChart2', action: () => goTo('stats') },
                   { label: t.help, icon: 'HelpCircle', action: () => goTo('help') },
@@ -381,7 +407,7 @@ export default function Index() {
               {nights.map((night, i) => (
                 <div key={night.num} className={`night-card p-5 ${night.unlocked ? '' : 'locked'}`}
                   style={{ animationDelay: `${i * 0.07}s` }}
-                  onClick={() => night.unlocked && alert(lang === 'ru' ? `Запуск: ${night.name.ru}` : `Starting: ${night.name.en}`)}>
+                  onClick={() => night.unlocked && notify(lang === 'ru' ? `🌙 Запуск: ${night.name.ru}` : `🌙 Starting: ${night.name.en}`)}>
                   {!night.unlocked && (
                     <div className="absolute top-3 right-3">
                       <Icon name="Lock" size={14} style={{ color: 'rgba(139,0,0,0.5)' }} />
@@ -517,7 +543,7 @@ export default function Index() {
                       <div className="text-xs font-mono" style={{ color: '#CC0000' }}>{c.reward}</div>
                       <button className="text-xs mt-1 px-3 py-1 transition-all"
                         style={{ border: '1px solid rgba(139,0,0,0.4)', color: 'rgba(200,160,140,0.8)' }}
-                        onClick={() => alert(lang === 'ru' ? 'Активируй в игре!' : 'Activate in game!')}>
+                        onClick={() => notify(lang === 'ru' ? `⚡ Челлендж "${c.name.ru}" принят!` : `⚡ Challenge "${c.name.en}" accepted!`)}>
                         {lang === 'ru' ? (c.active ? 'Активен' : 'Принять') : (c.active ? 'Active' : 'Accept')}
                       </button>
                     </div>
@@ -639,7 +665,7 @@ export default function Index() {
               <div className="flex gap-3">
                 <button className="flex-1 py-2 text-sm font-semibold tracking-wider uppercase transition-all"
                   style={{ border: '1px solid rgba(139,0,0,0.5)', color: '#CC0000', background: 'rgba(139,0,0,0.1)' }}
-                  onClick={() => alert(lang === 'ru' ? 'До свидания...' : 'Goodbye...')}>
+                  onClick={() => { setExitPrompt(false); notify(lang === 'ru' ? '👋 До свидания...' : '👋 Goodbye...'); }}>
                   {lang === 'ru' ? 'Выйти' : 'Exit'}
                 </button>
                 <button className="flex-1 py-2 text-sm font-semibold tracking-wider uppercase transition-all"
