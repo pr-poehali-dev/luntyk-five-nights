@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 
-type Screen = 'menu' | 'settings' | 'difficulty' | 'stats' | 'help';
+type Screen = 'menu' | 'settings' | 'difficulty' | 'stats' | 'help' | 'chars' | 'game';
+type CharId = 'luntik' | 'kuzya' | 'mila' | null;
 type SettingsTab = 'sound' | 'video' | 'language';
 type Language = 'ru' | 'en';
 
@@ -140,6 +141,80 @@ const controlsList = [
   { ru: 'Пауза', en: 'Pause', key: 'ESC' },
 ];
 
+const CHARACTERS = {
+  luntik: {
+    id: 'luntik' as CharId,
+    img: 'https://cdn.poehali.dev/projects/c32e205c-17d8-4a89-81ab-bdfc2c7ec03c/files/cb1af320-05eb-4deb-abb8-dd8a972a84e8.jpg',
+    name: { ru: 'Лунтик', en: 'Luntik' },
+    shortDesc: { ru: 'Главный преследователь. Добрый снаружи, опасный внутри.', en: 'Main pursuer. Kind outside, dangerous inside.' },
+    fullDesc: { ru: 'Лунтик — существо с Луны, которое заблудилось в твоём офисе. Внешне он выглядит мило, но не дай себя обмануть. Когда он в плохом настроении, он движется к офису с удвоенной скоростью. Он очень обидчив — одно грубое слово в чате, и он уже у твоей двери.', en: 'Luntik is a creature from the Moon who got lost in your office. He looks cute, but don\'t be fooled. When in a bad mood, he moves twice as fast. He\'s very sensitive — one rude word in chat and he\'s already at your door.' },
+    speed: 70,
+    aggression: 60,
+    sensitivity: 90,
+    abilities: [
+      { ru: 'Лунный рывок — ускоряется на 5 секунд', en: 'Moon Dash — speeds up for 5 seconds' },
+      { ru: 'Обида — грубость в чате +30% к скорости', en: 'Grudge — rudeness in chat +30% speed' },
+      { ru: 'Прятки — может скрыться с камер на 30 сек', en: 'Hide — can disappear from cameras for 30 sec' },
+    ],
+    color: '#9B59B6',
+    threat: { ru: 'Высокая', en: 'High' },
+  },
+  kuzya: {
+    id: 'kuzya' as CharId,
+    img: 'https://cdn.poehali.dev/projects/c32e205c-17d8-4a89-81ab-bdfc2c7ec03c/files/40e67a41-c937-4b07-9770-782ee2066633.jpg',
+    name: { ru: 'Кузя', en: 'Kuzya' },
+    shortDesc: { ru: 'Рассудительный гусеница. Медленный, но методичный.', en: 'Thoughtful caterpillar. Slow but methodical.' },
+    fullDesc: { ru: 'Кузя — умная гусеница, которая использует тактику. Он не торопится, но никогда не отступает. В чате он любит задавать вопросы — если ты не отвечаешь или отвечаешь грубо, он начинает проверять обе двери поочерёдно. Его сложнее всего остановить, когда он уже рядом.', en: 'Kuzya is a smart caterpillar who uses tactics. He doesn\'t rush, but never retreats. In chat he likes asking questions — if you ignore him or answer rudely, he starts checking both doors alternately. He\'s hardest to stop once he\'s nearby.' },
+    speed: 40,
+    aggression: 80,
+    sensitivity: 50,
+    abilities: [
+      { ru: 'Тактика — проверяет обе двери по очереди', en: 'Tactics — checks both doors alternately' },
+      { ru: 'Упорство — не реагирует на закрытую дверь', en: 'Persistence — ignores closed doors longer' },
+      { ru: 'Молчание — игнорирование его злит', en: 'Silence — being ignored makes him angry' },
+    ],
+    color: '#27AE60',
+    threat: { ru: 'Средняя', en: 'Medium' },
+  },
+  mila: {
+    id: 'mila' as CharId,
+    img: 'https://cdn.poehali.dev/projects/c32e205c-17d8-4a89-81ab-bdfc2c7ec03c/files/6290915f-0b9a-468b-bf5e-c8feae76da8a.jpg',
+    name: { ru: 'Мила', en: 'Mila' },
+    shortDesc: { ru: 'Быстрая пчела. Появляется внезапно, исчезает ещё быстрее.', en: 'Fast bee. Appears suddenly, disappears even faster.' },
+    fullDesc: { ru: 'Мила — пчела, которая летает по всему зданию. Она самая быстрая из всех персонажей. В чате она флиртует и любит комплименты — если ты груб с ней, она атакует с воздуха, минуя двери. Единственная, кого не остановить дверью — нужно выключать свет.', en: 'Mila is a bee who flies all over the building. She\'s the fastest of all characters. In chat she flirts and loves compliments — be rude and she attacks from the air, bypassing doors. She\'s the only one doors can\'t stop — you need to turn off lights.' },
+    speed: 95,
+    aggression: 40,
+    sensitivity: 75,
+    abilities: [
+      { ru: 'Полёт — обходит закрытые двери', en: 'Flight — bypasses closed doors' },
+      { ru: 'Молниеносность — телепортируется в соседнюю камеру', en: 'Lightning — teleports to adjacent camera' },
+      { ru: 'Обида на грубость — мгновенная атака', en: 'Offended — instant attack on rudeness' },
+    ],
+    color: '#F39C12',
+    threat: { ru: 'Критическая', en: 'Critical' },
+  },
+};
+
+type CharKey = keyof typeof CHARACTERS;
+
+const GAME_MESSAGES = {
+  luntik: [
+    { from: 'char', ru: 'Привет! Как дела у тебя там?', en: 'Hello! How are you in there?' },
+    { from: 'char', ru: 'Тут так темно... Можно я зайду?', en: 'It\'s so dark here... Can I come in?' },
+    { from: 'char', ru: 'Мне холодно. Открой дверь...', en: 'I\'m cold. Open the door...' },
+  ],
+  kuzya: [
+    { from: 'char', ru: 'Интересно, что ты там делаешь?', en: 'I wonder what you\'re doing in there?' },
+    { from: 'char', ru: 'Ты слышишь меня? Отвечай!', en: 'Can you hear me? Answer me!' },
+    { from: 'char', ru: 'Я никуда не уйду. Жди меня.', en: 'I\'m not leaving. Wait for me.' },
+  ],
+  mila: [
+    { from: 'char', ru: 'Привееет! Ты такой милый :)', en: 'Hiiii! You\'re so cute :)' },
+    { from: 'char', ru: 'Скажи мне что-нибудь приятное~', en: 'Say something nice to me~' },
+    { from: 'char', ru: 'Я умею летать, знаешь ли...', en: 'I can fly, you know...' },
+  ],
+};
+
 export default function Index() {
   const [screen, setScreen] = useState<Screen>('menu');
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('sound');
@@ -149,6 +224,16 @@ export default function Index() {
   const [statsTab, setStatsTab] = useState<'overview' | 'achievements' | 'challenges' | 'leaderboard'>('overview');
   const [helpTab, setHelpTab] = useState<'howto' | 'controls'>('howto');
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
+  const [selectedChar, setSelectedChar] = useState<CharId>(null);
+  const [leftDoor, setLeftDoor] = useState(false);
+  const [rightDoor, setRightDoor] = useState(false);
+  const [power, setPower] = useState(100);
+  const [gameTime, setGameTime] = useState(0);
+  const [activeChat, setActiveChat] = useState<CharKey>('luntik');
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{from: string; text: string; rude?: boolean}[]>([
+    { from: 'luntik', text: 'Привет! Как дела у тебя там?' },
+  ]);
 
   const [masterVol, setMasterVol] = useState(80);
   const [musicVol, setMusicVol] = useState(60);
@@ -261,8 +346,8 @@ export default function Index() {
 
               <div className="flex flex-col gap-2 max-w-xs">
                 {[
-                  { label: t.play, icon: 'Play', action: () => notify(lang === 'ru' ? '🎮 Игра запускается...' : '🎮 Game starting...'), accent: true },
-                  { label: t.chars, icon: 'User', action: () => notify(lang === 'ru' ? '👤 Характеристики персонажа' : '👤 Character stats') },
+                  { label: t.play, icon: 'Play', action: () => goTo('game'), accent: true },
+                  { label: t.chars, icon: 'User', action: () => goTo('chars') },
                   { label: t.difficulty, icon: 'Moon', action: () => goTo('difficulty') },
                   { label: t.stats, icon: 'BarChart2', action: () => goTo('stats') },
                   { label: t.help, icon: 'HelpCircle', action: () => goTo('help') },
@@ -649,6 +734,400 @@ export default function Index() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ═══ CHARS ═══ */}
+        {screen === 'chars' && !selectedChar && (
+          <div className="max-w-3xl mx-auto w-full px-6 py-12">
+            <BackBtn />
+            <h2 className="section-title text-4xl mb-2">{lang === 'ru' ? 'Персонажи' : 'Characters'}</h2>
+            <p className="text-sm mb-10 tracking-wide" style={{ color: 'rgba(180,160,140,0.5)' }}>
+              {lang === 'ru' ? 'Нажми на персонажа, чтобы узнать о нём больше' : 'Click a character to learn more'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {(Object.values(CHARACTERS) as typeof CHARACTERS[CharKey][]).map(char => (
+                <div key={char.id as string}
+                  className="night-card p-0 overflow-hidden cursor-pointer group"
+                  onClick={() => setSelectedChar(char.id)}>
+                  <div className="relative overflow-hidden" style={{ height: '220px' }}>
+                    <img src={char.img} alt={char.name.ru}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      style={{ filter: 'brightness(0.7) contrast(1.1)' }} />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)' }} />
+                    <div className="absolute bottom-3 left-4">
+                      <div className="font-horror text-2xl" style={{ color: char.color, textShadow: `0 0 15px ${char.color}` }}>
+                        {char.name[lang]}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs leading-relaxed mb-3" style={{ color: 'rgba(180,160,140,0.75)' }}>
+                      {char.shortDesc[lang]}
+                    </p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span style={{ color: 'rgba(139,0,0,0.7)' }}>{lang === 'ru' ? 'Угроза:' : 'Threat:'}</span>
+                      <span className="font-semibold" style={{ color: char.color }}>{char.threat[lang]}</span>
+                    </div>
+                    <div className="mt-3 text-xs font-medium tracking-wider uppercase flex items-center gap-1"
+                      style={{ color: 'rgba(139,0,0,0.6)' }}>
+                      <Icon name="ChevronRight" size={12} />
+                      {lang === 'ru' ? 'Подробнее' : 'Details'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ CHAR DETAIL ═══ */}
+        {screen === 'chars' && selectedChar && (() => {
+          const char = CHARACTERS[selectedChar as CharKey];
+          return (
+            <div className="max-w-2xl mx-auto w-full px-6 py-12">
+              <button className="back-btn mb-8" onClick={() => setSelectedChar(null)}>
+                <Icon name="ChevronLeft" size={16} />
+                {lang === 'ru' ? 'Все персонажи' : 'All characters'}
+              </button>
+
+              <div className="flex flex-col sm:flex-row gap-6 mb-8">
+                <div className="flex-shrink-0" style={{ width: '160px', height: '180px' }}>
+                  <img src={char.img} alt={char.name.ru}
+                    className="w-full h-full object-cover"
+                    style={{ filter: 'brightness(0.75) contrast(1.1)', border: `1px solid ${char.color}40` }} />
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-horror text-4xl mb-1" style={{ color: char.color, textShadow: `0 0 20px ${char.color}60` }}>
+                    {char.name[lang]}
+                  </h2>
+                  <div className="text-xs uppercase tracking-widest mb-4 flex items-center gap-2"
+                    style={{ color: 'rgba(139,0,0,0.6)' }}>
+                    <span>{lang === 'ru' ? 'Угроза:' : 'Threat:'}</span>
+                    <span style={{ color: char.color }}>{char.threat[lang]}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(180,160,140,0.8)' }}>
+                    {char.fullDesc[lang]}
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats bars */}
+              <div className="mb-6 p-4" style={{ border: '1px solid rgba(139,0,0,0.2)', background: 'rgba(10,0,0,0.8)' }}>
+                <div className="text-xs uppercase tracking-widest mb-4" style={{ color: 'rgba(139,0,0,0.7)' }}>
+                  {lang === 'ru' ? 'Характеристики' : 'Stats'}
+                </div>
+                {[
+                  { label: lang === 'ru' ? 'Скорость' : 'Speed', value: char.speed },
+                  { label: lang === 'ru' ? 'Агрессия' : 'Aggression', value: char.aggression },
+                  { label: lang === 'ru' ? 'Чувствительность' : 'Sensitivity', value: char.sensitivity },
+                ].map(s => (
+                  <div key={s.label} className="mb-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span style={{ color: 'rgba(180,160,140,0.7)' }}>{s.label}</span>
+                      <span style={{ color: char.color }}>{s.value}%</span>
+                    </div>
+                    <div className="h-1.5 rounded" style={{ background: 'rgba(139,0,0,0.15)' }}>
+                      <div className="h-1.5 rounded transition-all duration-1000"
+                        style={{ width: `${s.value}%`, background: `linear-gradient(90deg, #8B0000, ${char.color})`, boxShadow: `0 0 6px ${char.color}80` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Abilities */}
+              <div style={{ border: '1px solid rgba(139,0,0,0.2)', background: 'rgba(10,0,0,0.8)' }}>
+                <div className="px-4 py-3 border-b text-xs uppercase tracking-widest" style={{ borderColor: 'rgba(139,0,0,0.2)', color: 'rgba(139,0,0,0.7)' }}>
+                  {lang === 'ru' ? 'Умения' : 'Abilities'}
+                </div>
+                {char.abilities.map((a, i) => (
+                  <div key={i} className="px-4 py-3 flex items-start gap-3 border-b" style={{ borderColor: 'rgba(139,0,0,0.1)' }}>
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: char.color, boxShadow: `0 0 4px ${char.color}` }} />
+                    <span className="text-sm" style={{ color: 'rgba(200,180,160,0.85)' }}>{a[lang]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ═══ GAME ═══ */}
+        {screen === 'game' && (
+          <div className="fixed inset-0 z-20 flex flex-col" style={{ background: '#0a0400' }}>
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-4 py-2 border-b flex-shrink-0"
+              style={{ borderColor: 'rgba(139,0,0,0.3)', background: 'rgba(5,0,0,0.9)' }}>
+              <button className="back-btn" onClick={() => goTo('menu')}>
+                <Icon name="ChevronLeft" size={16} />
+                {lang === 'ru' ? 'Меню' : 'Menu'}
+              </button>
+              <div className="flex items-center gap-6">
+                <div className="text-xs font-mono" style={{ color: 'rgba(180,160,140,0.7)' }}>
+                  {lang === 'ru' ? 'НОЧЬ 1' : 'NIGHT 1'} — 12:00 AM
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon name="Zap" size={12} style={{ color: power > 30 ? '#CC0000' : '#FF0000' }} />
+                  <div className="w-20 h-2 rounded" style={{ background: 'rgba(139,0,0,0.2)' }}>
+                    <div className="h-2 rounded transition-all duration-300"
+                      style={{ width: `${power}%`, background: power > 50 ? '#CC0000' : power > 25 ? '#FF6600' : '#FF0000', boxShadow: `0 0 6px currentColor` }} />
+                  </div>
+                  <span className="text-xs font-mono" style={{ color: '#CC0000' }}>{power}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Main area */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Office view */}
+              <div className="flex-1 relative flex items-end justify-center pb-0"
+                style={{ background: 'radial-gradient(ellipse at 50% 60%, #1a0800 0%, #050200 70%)', minHeight: 0 }}>
+
+                {/* Room ceiling */}
+                <div className="absolute top-0 left-0 right-0 h-16"
+                  style={{ background: 'linear-gradient(to bottom, #030100, transparent)' }} />
+
+                {/* Walls */}
+                <div className="absolute inset-0 flex">
+                  <div className="w-1/4 h-full" style={{ background: 'linear-gradient(to right, #0a0400, transparent)', borderRight: '2px solid rgba(60,30,0,0.4)' }} />
+                  <div className="flex-1" />
+                  <div className="w-1/4 h-full" style={{ background: 'linear-gradient(to left, #0a0400, transparent)', borderLeft: '2px solid rgba(60,30,0,0.4)' }} />
+                </div>
+
+                {/* Left door */}
+                <div className="absolute left-0 top-0 bottom-0 w-1/5 flex flex-col items-center justify-center gap-3">
+                  <div className="w-full flex-1 relative"
+                    style={{ background: leftDoor ? 'rgba(20,8,0,0.98)' : 'transparent', borderRight: '3px solid rgba(80,40,0,0.6)', transition: 'background 0.3s' }}>
+                    {leftDoor && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a0800 25%, #0d0400 75%)', border: '2px solid rgba(100,50,0,0.5)' }}>
+                          <div className="h-full flex flex-col justify-around p-2">
+                            {[...Array(5)].map((_, i) => (
+                              <div key={i} className="h-1 rounded" style={{ background: 'rgba(60,30,0,0.4)' }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!leftDoor && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                        <div className="w-3/4 h-3/4 border" style={{ borderColor: 'rgba(60,30,0,0.3)' }} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="mb-4 px-3 py-2 text-xs font-bold tracking-wider uppercase transition-all"
+                    style={{
+                      background: leftDoor ? 'rgba(139,0,0,0.4)' : 'rgba(30,15,0,0.8)',
+                      border: `1px solid ${leftDoor ? 'rgba(200,0,0,0.6)' : 'rgba(80,40,0,0.5)'}`,
+                      color: leftDoor ? '#CC0000' : 'rgba(180,140,100,0.7)',
+                      boxShadow: leftDoor ? '0 0 10px rgba(139,0,0,0.4)' : 'none',
+                    }}
+                    onClick={() => { setLeftDoor(!leftDoor); setPower(p => Math.max(0, p - 2)); }}>
+                    {leftDoor ? '🔒' : '🚪'} {lang === 'ru' ? 'Л' : 'L'}
+                  </button>
+                </div>
+
+                {/* Right door */}
+                <div className="absolute right-0 top-0 bottom-0 w-1/5 flex flex-col items-center justify-center gap-3">
+                  <div className="w-full flex-1 relative"
+                    style={{ background: rightDoor ? 'rgba(20,8,0,0.98)' : 'transparent', borderLeft: '3px solid rgba(80,40,0,0.6)', transition: 'background 0.3s' }}>
+                    {rightDoor && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a0800 25%, #0d0400 75%)', border: '2px solid rgba(100,50,0,0.5)' }}>
+                          <div className="h-full flex flex-col justify-around p-2">
+                            {[...Array(5)].map((_, i) => (
+                              <div key={i} className="h-1 rounded" style={{ background: 'rgba(60,30,0,0.4)' }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!rightDoor && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                        <div className="w-3/4 h-3/4 border" style={{ borderColor: 'rgba(60,30,0,0.3)' }} />
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    className="mb-4 px-3 py-2 text-xs font-bold tracking-wider uppercase transition-all"
+                    style={{
+                      background: rightDoor ? 'rgba(139,0,0,0.4)' : 'rgba(30,15,0,0.8)',
+                      border: `1px solid ${rightDoor ? 'rgba(200,0,0,0.6)' : 'rgba(80,40,0,0.5)'}`,
+                      color: rightDoor ? '#CC0000' : 'rgba(180,140,100,0.7)',
+                      boxShadow: rightDoor ? '0 0 10px rgba(139,0,0,0.4)' : 'none',
+                    }}
+                    onClick={() => { setRightDoor(!rightDoor); setPower(p => Math.max(0, p - 2)); }}>
+                    {rightDoor ? '🔒' : '🚪'} {lang === 'ru' ? 'П' : 'R'}
+                  </button>
+                </div>
+
+                {/* Desk */}
+                <div className="absolute bottom-0 left-1/2 w-2/3 h-16 -translate-x-1/2"
+                  style={{ background: 'linear-gradient(to top, #2a1200, #1a0a00)', borderTop: '3px solid rgba(100,50,0,0.6)', borderRadius: '4px 4px 0 0' }}>
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-4">
+                    <div className="w-8 h-8 rounded" style={{ background: 'rgba(139,0,0,0.2)', border: '1px solid rgba(139,0,0,0.3)' }} />
+                    <div className="w-12 h-8 rounded" style={{ background: 'rgba(20,10,0,0.8)', border: '1px solid rgba(80,40,0,0.4)' }} />
+                  </div>
+                </div>
+
+                {/* Overhead lamp glow */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32"
+                  style={{ background: 'radial-gradient(ellipse, rgba(200,120,0,0.08) 0%, transparent 70%)' }} />
+
+                {/* Status text */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 text-xs font-mono tracking-widest"
+                  style={{ color: 'rgba(139,0,0,0.5)' }}>
+                  {power < 20 ? (lang === 'ru' ? '⚠ ПИТАНИЕ КРИТИЧНО' : '⚠ POWER CRITICAL') : (lang === 'ru' ? '● ВЫ В ОФИСЕ' : '● YOU ARE IN OFFICE')}
+                </div>
+              </div>
+
+              {/* Tablet / Chat panel */}
+              <div className="w-72 flex-shrink-0 flex flex-col border-l"
+                style={{ borderColor: 'rgba(139,0,0,0.2)', background: 'rgba(5,0,0,0.95)' }}>
+
+                {/* Tablet header */}
+                <div className="px-3 py-2 border-b flex items-center gap-2"
+                  style={{ borderColor: 'rgba(139,0,0,0.2)', background: 'rgba(10,0,0,0.9)' }}>
+                  <div className="w-2 h-2 rounded-full animate-pulse-red" style={{ background: '#CC0000' }} />
+                  <span className="text-xs font-mono tracking-widest uppercase" style={{ color: 'rgba(139,0,0,0.8)' }}>
+                    {lang === 'ru' ? 'ПЛАНШЕТ — СВЯЗЬ' : 'TABLET — COMMS'}
+                  </span>
+                </div>
+
+                {/* Character tabs */}
+                <div className="flex border-b" style={{ borderColor: 'rgba(139,0,0,0.15)' }}>
+                  {(Object.keys(CHARACTERS) as CharKey[]).map(key => {
+                    const c = CHARACTERS[key];
+                    return (
+                      <button key={key}
+                        className="flex-1 py-2 text-xs transition-all"
+                        style={{
+                          color: activeChat === key ? '#fff' : 'rgba(140,120,100,0.5)',
+                          borderBottom: activeChat === key ? `2px solid ${c.color}` : '2px solid transparent',
+                          background: activeChat === key ? `${c.color}18` : 'transparent',
+                          marginBottom: '-1px',
+                        }}
+                        onClick={() => {
+                          setActiveChat(key);
+                          const msgs = GAME_MESSAGES[key];
+                          const randomMsg = msgs[Math.floor(Math.random() * msgs.length)];
+                          setChatMessages(prev => [...prev, { from: key, text: randomMsg[lang === 'ru' ? 'ru' : 'en'] }]);
+                        }}>
+                        {c.name[lang]}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ minHeight: 0 }}>
+                  {chatMessages.filter(m => m.from === activeChat || m.from === 'player').map((msg, i) => (
+                    <div key={i} className={`flex ${msg.from === 'player' ? 'justify-end' : 'justify-start'}`}>
+                      <div className="max-w-[85%] px-3 py-2 text-xs leading-relaxed"
+                        style={{
+                          background: msg.from === 'player'
+                            ? (msg.rude ? 'rgba(139,0,0,0.35)' : 'rgba(30,15,0,0.9)')
+                            : 'rgba(20,10,0,0.9)',
+                          border: `1px solid ${msg.from === 'player' ? (msg.rude ? 'rgba(200,0,0,0.5)' : 'rgba(80,50,0,0.4)') : `${CHARACTERS[activeChat].color}30`}`,
+                          color: msg.from === 'player' ? 'rgba(220,200,160,0.9)' : 'rgba(200,180,150,0.85)',
+                          borderRadius: msg.from === 'player' ? '8px 2px 8px 8px' : '2px 8px 8px 8px',
+                        }}>
+                        {msg.rude && <span style={{ color: '#CC0000', marginRight: '4px' }}>⚠</span>}
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                  {chatMessages.filter(m => m.from === activeChat || m.from === 'player').length === 0 && (
+                    <div className="text-xs text-center mt-4" style={{ color: 'rgba(100,80,60,0.5)' }}>
+                      {lang === 'ru' ? 'Нажми на вкладку персонажа' : 'Click a character tab'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Input */}
+                <div className="p-2 border-t" style={{ borderColor: 'rgba(139,0,0,0.2)' }}>
+                  <div className="flex gap-1 mb-1">
+                    {(lang === 'ru'
+                      ? ['Привет!', 'Отстань', 'Уходи!!!']
+                      : ['Hello!', 'Leave me', 'Go away!!!']).map((quick, qi) => (
+                      <button key={qi}
+                        className="flex-1 text-xs py-1 transition-all"
+                        style={{
+                          border: `1px solid ${qi === 2 ? 'rgba(200,0,0,0.4)' : 'rgba(80,50,0,0.4)'}`,
+                          color: qi === 2 ? 'rgba(200,80,80,0.8)' : 'rgba(160,130,100,0.7)',
+                          background: 'rgba(10,5,0,0.6)',
+                        }}
+                        onClick={() => {
+                          const isRude = qi === 2;
+                          setChatMessages(prev => [...prev, { from: 'player', text: quick, rude: isRude }]);
+                          if (isRude) {
+                            notify(lang === 'ru' ? `😈 ${CHARACTERS[activeChat].name.ru} злится!` : `😈 ${CHARACTERS[activeChat].name.en} is angry!`);
+                            setPower(p => Math.max(0, p - 5));
+                          }
+                          const resp = GAME_MESSAGES[activeChat];
+                          setTimeout(() => {
+                            const r = resp[Math.floor(Math.random() * resp.length)];
+                            setChatMessages(prev => [...prev, { from: activeChat, text: r[lang === 'ru' ? 'ru' : 'en'] }]);
+                          }, 800);
+                        }}>
+                        {quick}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-1">
+                    <input
+                      className="flex-1 px-2 py-1.5 text-xs outline-none"
+                      style={{
+                        background: 'rgba(15,5,0,0.8)',
+                        border: '1px solid rgba(80,40,0,0.4)',
+                        color: 'rgba(220,200,160,0.9)',
+                      }}
+                      placeholder={lang === 'ru' ? 'Напиши ответ...' : 'Type reply...'}
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && chatInput.trim()) {
+                          const rudeWords = ['уходи', 'отстань', 'заткнись', 'дурак', 'go away', 'shut up', 'leave'];
+                          const isRude = rudeWords.some(w => chatInput.toLowerCase().includes(w));
+                          setChatMessages(prev => [...prev, { from: 'player', text: chatInput, rude: isRude }]);
+                          if (isRude) {
+                            notify(lang === 'ru' ? `😈 ${CHARACTERS[activeChat].name.ru} злится!` : `😈 ${CHARACTERS[activeChat].name.en} is angry!`);
+                            setPower(p => Math.max(0, p - 5));
+                          }
+                          const resp = GAME_MESSAGES[activeChat];
+                          const r = resp[Math.floor(Math.random() * resp.length)];
+                          setTimeout(() => {
+                            setChatMessages(prev => [...prev, { from: activeChat, text: r[lang === 'ru' ? 'ru' : 'en'] }]);
+                          }, 800);
+                          setChatInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      className="px-3 py-1.5 text-xs font-bold"
+                      style={{ background: 'rgba(139,0,0,0.3)', border: '1px solid rgba(139,0,0,0.5)', color: '#CC0000' }}
+                      onClick={() => {
+                        if (!chatInput.trim()) return;
+                        const rudeWords = ['уходи', 'отстань', 'заткнись', 'дурак', 'go away', 'shut up', 'leave'];
+                        const isRude = rudeWords.some(w => chatInput.toLowerCase().includes(w));
+                        setChatMessages(prev => [...prev, { from: 'player', text: chatInput, rude: isRude }]);
+                        if (isRude) {
+                          notify(lang === 'ru' ? `😈 ${CHARACTERS[activeChat].name.ru} злится!` : `😈 ${CHARACTERS[activeChat].name.en} is angry!`);
+                          setPower(p => Math.max(0, p - 5));
+                        }
+                        const resp = GAME_MESSAGES[activeChat];
+                        const r = resp[Math.floor(Math.random() * resp.length)];
+                        setTimeout(() => {
+                          setChatMessages(prev => [...prev, { from: activeChat, text: r[lang === 'ru' ? 'ru' : 'en'] }]);
+                        }, 800);
+                        setChatInput('');
+                      }}>
+                      ▸
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
